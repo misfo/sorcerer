@@ -28,6 +28,7 @@ module Sorcerer
       @stack = []
       @level = 0
       @virgin_line = true
+      @delimiters = nil
     end
 
     def source
@@ -63,6 +64,14 @@ module Sorcerer
       yield
     ensure
       @level = old_level
+    end
+
+    def delimited(delimiters)
+      old_delimiters = @delimiters
+      @delimiters = delimiters
+      yield
+    ensure
+      @delimiters = old_delimiters
     end
 
     def sexp?(obj)
@@ -138,6 +147,14 @@ module Sorcerer
       @source << string.to_s
     end
 
+    def emit_escaped(string)
+      if @delimiters
+        emit(string.to_s.gsub(@delimiters, '\\\\\0'))
+      else
+        emit(string)
+      end
+    end
+
     def nyi(sexp)
       raise "Handler for #{sexp.first} not implemented (#{sexp.inspect})"
     end
@@ -209,11 +226,13 @@ module Sorcerer
     def words(marker, sexp)
       emit("%#{marker}{") if @word_level == 0
       @word_level += 1
-      if !quoted_word_new?(sexp)
-        resource(sexp[1])
-        emit(" ")
+      delimited(/[{}]/) do
+        if !quoted_word_new?(sexp)
+          resource(sexp[1])
+          emit(" ")
+        end
+        resource(sexp[2])
       end
-      resource(sexp[2])
       @word_level -= 1
       emit("}") if @word_level == 0
     end
@@ -551,7 +570,9 @@ module Sorcerer
       },
       :dyna_symbol => lambda { |sexp|
         emit(':"')
-        resource(sexp[1])
+        delimited(?") do
+          resource(sexp[1])
+        end
         emit('"')
       },
       :else => lambda { |sexp|
@@ -815,7 +836,9 @@ module Sorcerer
       },
       :string_literal => lambda { |sexp|
         emit('"')
-        resource(sexp[1])
+        delimited(?") do
+          resource(sexp[1])
+        end
         emit('"')
       },
       :super => lambda { |sexp|
@@ -974,7 +997,9 @@ module Sorcerer
       :@tlambda => NYI,
       :@tlambeg => NYI,
       :@tstring_beg => NYI,
-      :@tstring_content => EMIT1,
+      :@tstring_content => lambda { |sexp|
+        emit_escaped(sexp[1])
+      },
       :@tstring_end => NYI,
       :@words_beg => NYI,
       :@words_sep => NYI,

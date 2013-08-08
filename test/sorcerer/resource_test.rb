@@ -230,6 +230,7 @@ class ResourceTest < Test::Unit::TestCase
   def test_can_source_strings
     assert_resource '"HI"'
     assert_equal '"HI"', source("'HI'")
+    assert_equal '" \" "', source(%{' " '})
   end
 
   def test_can_source_strings_with_escape_chars
@@ -258,6 +259,7 @@ class ResourceTest < Test::Unit::TestCase
     assert_resource '%w{a b}'
     assert_resource '%w{a b c}'
     assert_resource '%w{Now is the time for all good men}'
+    assert_equal '%w{a\} b\{}', source('%w(a} b{)')
   end
 
   def test_can_source_words
@@ -265,6 +267,7 @@ class ResourceTest < Test::Unit::TestCase
     assert_resource '%W{a b}'
     assert_resource '%W{a b c}'
     assert_resource '%W{Now is the time for all good men}'
+    assert_equal '%W{a\} b\{}', source('%W(a} b{)')
   end
 
   def test_can_source_many_words
@@ -278,6 +281,7 @@ class ResourceTest < Test::Unit::TestCase
 
   def test_can_source_fancy_symbol_literals
     assert_resource ':"hello, world"'
+    assert_equal ':" \" "', source(%{:' " '})
   end
 
   def test_can_source_regular_expressions
